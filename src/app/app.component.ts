@@ -1,4 +1,5 @@
-import { Component, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { MESSAGES } from './components/infinite-scroller/messages';
 
 @Component({
     selector: 'my-app',
@@ -6,4 +7,11 @@ import { Component, ViewEncapsulation } from '@angular/core';
     styles: [require('./app.component.css')],
     encapsulation: ViewEncapsulation.None
 })
-export class AppComponent { }
+export class AppComponent implements OnInit {
+    index = 0;
+    data: any[] = [];
+
+    ngOnInit() {
+
+    }
+}

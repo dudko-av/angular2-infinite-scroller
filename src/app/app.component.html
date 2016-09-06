@@ -1,11 +1,8 @@
 <!--<infinite-scroller></infinite-scroller>-->
-<div *infiniteScroller="">
-    <div class="chat-item test" data-id="{{id}}">
-        <div class="bubble">
-            <p></p>
-            <div class="meta">
-                <time class="posted-date"></time>
-            </div>
+<div class="infinitive-scroller-host">
+    <div *infiniteScroller="let item of data" style="height: 10px;">
+        <div class="chat-item test">
+            test {{item}}
         </div>
     </div>
 </div>

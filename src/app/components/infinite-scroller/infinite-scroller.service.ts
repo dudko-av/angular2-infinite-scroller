@@ -45,9 +45,7 @@ export class InfiniteScrollerService {
     messageTemplate = document.querySelector("#templates > .chat-item:not(.tombstone)");
     nextItem = 0;
 
-    constructor() {
-        debugger
-    }
+    constructor() { }
 
     fetch(count) { debugger
         // Fetch at least 30 or count more objects for display.

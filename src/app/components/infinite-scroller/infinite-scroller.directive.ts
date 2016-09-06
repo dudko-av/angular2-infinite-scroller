@@ -1,4 +1,7 @@
-import { Directive, OnInit, ElementRef, TemplateRef, ViewContainerRef } from '@angular/core';
+import {
+    Directive, OnInit, ElementRef, TemplateRef, ViewContainerRef, Input, Output, EventEmitter,
+    EmbeddedViewRef
+} from '@angular/core';
 import { Observable } from 'rxjs/Rx';
 import { InfiniteScrollerService } from './infinite-scroller.service';
 
@@ -14,20 +17,33 @@ const SCROLL_RUNWAY = 2000;
 // The animation interval (in ms) for fading in content from tombstones.
 const ANIMATION_DURATION_MS = 200;
 
+interface Anchor {
+    index: number;
+    offset: number;
+}
+
+interface Item {
+    'data': any,
+    'node': HTMLElement,
+    'height': number,
+    'width': Number,
+    'top': number,
+}
+
 @Directive({
     selector: '[infiniteScroller]',
     providers: [InfiniteScrollerService]
 })
 export class InfiniteScrollerDirective implements OnInit {
-    anchorItem = { index: 0, offset: 0 };
+    anchorItem: Anchor = { index: 0, offset: 0 };
     firstAttachedItem = 0;
     lastAttachedItem = 0;
     anchorScrollTop = 0;
     tombstoneSize = 0;
     tombstoneWidth = 0;
-    tombstones = [];
-    scroller: Element;
-    items = [];
+    tombstones: HTMLElement[] = [];
+    scroller: HTMLElement;
+    items: Item[] = [];
     loadedItems = 0;
     requestInProgress = false;
 
@@ -36,23 +52,24 @@ export class InfiniteScrollerDirective implements OnInit {
     scrollRunway: HTMLDivElement = document.createElement('div');
     scrollRunwayEnd = 0;
 
+    // List
+    @Input('infiniteScrollerOf') list: Array<any>;
+    @Output() fetch = new EventEmitter<number>();
+
     constructor(
         private host: ElementRef,
         private source: InfiniteScrollerService,
-        private tmpRef: TemplateRef,
+        private tmpRef: TemplateRef<any>,
         private viewRef: ViewContainerRef
     ) {
         this.scroller = host.nativeElement.parentNode;
     }
 
-    ngOnInit() {  debugger
+    ngOnInit() {
         Observable.fromEvent(this.scroller, 'scroll').subscribe(() => {
-            console.log('scroll');
-            console.log(document.getElementsByTagName('*').length);
             this.onScroll();
         });
         Observable.fromEvent(window, 'resize').subscribe(() => {
-            console.log('resize');
             this.onResize();
         });
         // Internet explorer seems to require some text in this div in order to
@@ -74,10 +91,11 @@ export class InfiniteScrollerDirective implements OnInit {
         // TODO: If we already have tombstones attached to the document, it would
         // probably be more efficient to use one of them rather than create a new
         // one to measure.
-        let tombstone: Element = this.source.createTombstone();
+        //let tombstone: Element = this.source.createTombstone();
+        let tombstone: HTMLElement = this.viewRef.createEmbeddedView(this.tmpRef).rootNodes[0];
         tombstone.style.position = 'absolute';
         // this.scroller.appendChild(tombstone);
-        this.viewRef.createEmbeddedView(this.tmpRef);
+        // // this.viewRef.createEmbeddedView(this.tmpRef);
         tombstone.classList.remove('invisible');
         this.tombstoneSize = tombstone.offsetHeight;
         this.tombstoneWidth = tombstone.offsetWidth;
@@ -123,7 +141,7 @@ export class InfiniteScrollerDirective implements OnInit {
      * @return {{index: number, offset: number}} Returns the new item and offset
      *     scroll should be anchored to.
      */
-    calculateAnchoredItem(initialAnchor, delta) {
+    calculateAnchoredItem(initialAnchor: Anchor, delta: number): Anchor { console.log('calculateAnchoredItem');
         if (delta == 0)
             return initialAnchor;
         delta += initialAnchor.offset;
@@ -156,7 +174,7 @@ export class InfiniteScrollerDirective implements OnInit {
      * @param {number} start The first item which should be attached.
      * @param {number} end One past the last item which should be attached.
      */
-    fill(start, end) {
+    fill(start: number, end: number) {
         this.firstAttachedItem = Math.max(0, start);
         this.lastAttachedItem = end;
         this.attachContent();
@@ -166,12 +184,11 @@ export class InfiniteScrollerDirective implements OnInit {
      * Creates or returns an existing tombstone ready to be reused.
      * @return {Element} A tombstone element ready to be used.
      */
-    getTombstone() {
-        debugger
+    getTombstone(): HTMLElement {
         let tombstone = this.tombstones.pop();
         if (tombstone) {
             tombstone.classList.remove('invisible');
-            tombstone.style.opacity = 1;
+            tombstone.style.opacity = '1';
             tombstone.style.transform = '';
             tombstone.style.transition = '';
             return tombstone;
@@ -217,7 +234,7 @@ export class InfiniteScrollerDirective implements OnInit {
                     this.items[i].data) {
                     // TODO: Probably best to move items on top of tombstones and fade them in instead.
                     if (ANIMATION_DURATION_MS) {
-                        this.items[i].node.style.zIndex = 1;
+                        this.items[i].node.style.zIndex = '1';
                         tombstoneAnimations[i] = [this.items[i].node, this.items[i].top - this.anchorScrollTop];
                     } else {
                         this.items[i].node.classList.add('invisible');
@@ -232,8 +249,8 @@ export class InfiniteScrollerDirective implements OnInit {
             // Maybe don't do this if it's already attached?
             node.style.position = 'absolute';
             this.items[i].top = -1;
-            this.scroller.appendChild(node);
-            // this.viewRef.createEmbeddedView(node);
+            //this.scroller.appendChild(node);
+            this.viewRef.createEmbeddedView(this.tmpRef);
             this.items[i].node = node;
         }
 
@@ -320,7 +337,7 @@ export class InfiniteScrollerDirective implements OnInit {
     /**
      * Requests additional content if we don't have enough currently.
      */
-    maybeRequestContent() {
+    maybeRequestContent() { console.log('maybeRequestContent');
         // Don't issue another request if one is already in progress as we don't
         // know where to start the next request yet.
         if (this.requestInProgress)
@@ -330,13 +347,14 @@ export class InfiniteScrollerDirective implements OnInit {
             return;
         this.requestInProgress = true;
         var lastItem = this.items[this.loadedItems - 1];
-        this.source.fetch(itemsNeeded).then(this.addContent.bind(this));
+        // this.source.fetch(itemsNeeded).then(this.addContent.bind(this));
+        this.fetch.emit(itemsNeeded);
     }
 
     /**
      * Adds an item to the items list.
      */
-    addItem() {
+    addItem() { console.log('addItem');
         this.items.push({
             'data': null,
             'node': null,
@@ -352,7 +370,7 @@ export class InfiniteScrollerDirective implements OnInit {
      * @param {Array<Object>} items The array of items to be added to the infinite
      *     scroller list.
      */
-    addContent(items) {
+    addContent(items: any[]) { console.log('addContent');
         this.requestInProgress = false;
         var startIndex = this.items.length;
         for (var i = 0; i < items.length; i++) {

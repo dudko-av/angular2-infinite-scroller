@@ -5,6 +5,26 @@
     <title>Title</title>
 </head>
 <body>
+<div id="templates">
+    <li class="chat-item" data-id="{{id}}">
+        <div class="bubble">
+            <p></p>
+            <div class="meta">
+                <time class="posted-date"></time>
+            </div>
+        </div>
+    </li>
+    <li class="chat-item tombstone" data-id="{{id}}">
+        <div class="bubble">
+            <p></p>
+            <p></p>
+            <p></p>
+            <div class="meta">
+                <time class="posted-date"></time>
+            </div>
+        </div>
+    </li>
+</div>
 <my-app>Loading...</my-app>
 </body>
 </html>

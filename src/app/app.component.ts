@@ -8,10 +8,10 @@ import { MESSAGES } from './components/infinite-scroller/messages';
     encapsulation: ViewEncapsulation.None
 })
 export class AppComponent implements OnInit {
-    index = 0;
-    data: any[] = MESSAGES;
+    data: any[] = [];
 
     ngOnInit() {
 
     }
+
 }

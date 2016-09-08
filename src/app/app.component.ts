@@ -9,7 +9,7 @@ import { MESSAGES } from './components/infinite-scroller/messages';
 })
 export class AppComponent implements OnInit {
     index = 0;
-    data: any[] = [];
+    data: any[] = MESSAGES;
 
     ngOnInit() {
 

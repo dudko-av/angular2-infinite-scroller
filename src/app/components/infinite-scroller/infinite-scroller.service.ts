@@ -47,7 +47,7 @@ export class InfiniteScrollerService {
 
     constructor() { }
 
-    fetch(count) { debugger
+    fetch(count: number) {
         // Fetch at least 30 or count more objects for display.
         count = Math.max(30, count);
         return new Promise(function (resolve, reject) {
@@ -66,8 +66,7 @@ export class InfiniteScrollerService {
         return <HTMLDivElement>this.tombstone.cloneNode(true);
     }
 
-    render(item, div) {
-        debugger
+    render(item: any, div: HTMLDivElement): HTMLDivElement {
         // TODO: Different style?
         div = div || this.messageTemplate.cloneNode(true);
         div.dataset.id = item.id;

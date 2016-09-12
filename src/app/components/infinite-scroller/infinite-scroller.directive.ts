@@ -14,11 +14,27 @@ const RUNWAY_ITEMS_OPPOSITE = 10;
 const SCROLL_RUNWAY = 2000;
 
 // The animation interval (in ms) for fading in content from tombstones.
-const ANIMATION_DURATION_MS = 200;
+const ANIMATION_DURATION_MS = 0;
 
 class Anchor {
     index: number = 0;
     offset: number = 0;
+}
+
+class Item {
+    'data': any = null;
+    'height': number = 0;
+    'width': number = 0;
+    'top': number = 0;
+    'view': EmbeddedViewRef<any> = null;
+
+    get node(): HTMLElement {
+        return this.view ? this.view.rootNodes[0] : null;
+    }
+
+    set node(node: any) {
+        this.view = null;
+    }
 }
 
 @Directive({
@@ -32,7 +48,7 @@ export class InfiniteScrollerDirective implements OnInit {
     anchorScrollTop: number = 0;
     tombstoneSize: number = 0;
     tombstoneWidth: number = 0;
-    tombstones: any[] = [];
+    tombstones: EmbeddedViewRef<any>[] = [];
     scroller: HTMLElement;
     items: any[] = [];
     loadedItems: number = 0;
@@ -53,10 +69,10 @@ export class InfiniteScrollerDirective implements OnInit {
 
    ngOnInit() {
         Observable.fromEvent(this.scroller, 'scroll').subscribe(() => {
-
+            this.onScroll();
         });
        Observable.fromEvent(window, 'resize').subscribe(() => {
-
+           this.onScroll();
        });
        // Internet explorer seems to require some text in this div in order to
        // ensure that it can be scrolled to.
@@ -73,6 +89,8 @@ export class InfiniteScrollerDirective implements OnInit {
     /**
      * Called when the browser window resizes to adapt to new scroller bounds and
      * layout sizes of items within the scroller.
+     *
+     *  Stable
      */
     onResize() {
         // TODO: If we already have tombstones attached to the document, it would
@@ -99,8 +117,10 @@ export class InfiniteScrollerDirective implements OnInit {
      * and offset and then updates the visible elements, requesting more items
      * from the source if we've scrolled past the end of the currently available
      * content.
+     *
+     * Stable
      */
-    onScroll() {
+    onScroll() { console.log(document.getElementsByTagName('*').length);
         let delta = this.scroller.scrollTop - this.anchorScrollTop;
         // Special case, if we get to very top, always scroll to top.
         if (this.scroller.scrollTop == 0) {
@@ -124,6 +144,8 @@ export class InfiniteScrollerDirective implements OnInit {
      * @param {number} delta The offset from the initial item to scroll by.
      * @return {{index: number, offset: number}} Returns the new item and offset
      *     scroll should be anchored to.
+     *
+     * Stable
      */
     calculateAnchoredItem(initialAnchor: Anchor, delta: number): Anchor {
         if (delta == 0)
@@ -157,6 +179,8 @@ export class InfiniteScrollerDirective implements OnInit {
      * Sets the range of items which should be attached and attaches those items.
      * @param {number} start The first item which should be attached.
      * @param {number} end One past the last item which should be attached.
+     *
+     * Stable
      */
     fill(start: number, end: number) {
         this.firstAttachedItem = Math.max(0, start);
@@ -173,7 +197,7 @@ export class InfiniteScrollerDirective implements OnInit {
         // TODO: Limit this based on the change in visible items rather than looping
         // over all items.
         var i;
-        var unusedNodes = [];
+        var unusedNodes: EmbeddedViewRef<any>[] = [];
         for (i = 0; i < this.items.length; i++) {
             // Skip the items which should be visible.
             if (i == this.firstAttachedItem) {
@@ -182,10 +206,10 @@ export class InfiniteScrollerDirective implements OnInit {
             }
             if (this.items[i].node) {
                 if (this.items[i].node.classList.contains('tombstone')) {
-                    this.tombstones.push(this.items[i].node);
-                    this.tombstones[this.tombstones.length - 1].classList.add('invisible');
+                    this.items[i].node.classList.add('invisible');
+                    this.tombstones.push(this.items[i].view);
                 } else {
-                    unusedNodes.push(this.items[i].node);
+                    unusedNodes.push(this.items[i].view);
                 }
             }
             this.items[i].node = null;
@@ -206,24 +230,25 @@ export class InfiniteScrollerDirective implements OnInit {
                         tombstoneAnimations[i] = [this.items[i].node, this.items[i].top - this.anchorScrollTop];
                     } else {
                         this.items[i].node.classList.add('invisible');
-                        this.tombstones.push(this.items[i].node);
+                        this.tombstones.push(this.items[i].view);
                     }
                     this.items[i].node = null;
                 } else {
                     continue;
                 }
             }
-            var node = this.items[i].data ? this.source.render(this.items[i].data, unusedNodes.pop()) : this.getTombstone();
+            let view: EmbeddedViewRef<any> = this.items[i].data ?
+                this.updateContext(this.items[i].data, unusedNodes.pop(), i) :
+                this.getTombstone();
             // Maybe don't do this if it's already attached?
-            node.style.position = 'absolute';
+            view.rootNodes[0].style.position = 'absolute';
             this.items[i].top = -1;
-            this.scroller.appendChild(node);
-            this.items[i].node = node;
+            this.items[i].view = view;
         }
 
         // Remove all unused nodes
         while (unusedNodes.length) {
-            this.scroller.removeChild(unusedNodes.pop());
+            unusedNodes.pop().destroy();
         }
 
         // Get the height of all nodes which haven't been measured yet.
@@ -281,21 +306,21 @@ export class InfiniteScrollerDirective implements OnInit {
             curPos += this.items[i].height || this.tombstoneSize;
         }
 
-        this.scrollRunwayEnd = Math.max(this.scrollRunwayEnd, curPos + SCROLL_RUNWAY)
+        this.scrollRunwayEnd = Math.max(this.scrollRunwayEnd, curPos + SCROLL_RUNWAY);
         this.scrollRunway.style.transform = 'translate(0, ' + this.scrollRunwayEnd + 'px)';
         this.scroller.scrollTop = this.anchorScrollTop;
 
-        if (ANIMATION_DURATION_MS) {
+/*        if (ANIMATION_DURATION_MS) {
             // TODO: Should probably use transition end, but there are a lot of animations we could be listening to.
             setTimeout(function() {
                 for (var i in tombstoneAnimations) {
                     var anim = tombstoneAnimations[i];
                     anim[0].classList.add('invisible');
-                    this.tombstones_.push(anim[0]);
+                    this.tombstones.push(anim[0]);
                     // Tombstone can be recycled now.
                 }
             }.bind(this), ANIMATION_DURATION_MS)
-        }
+        }*/
 
         this.maybeRequestContent();
     }
@@ -307,26 +332,20 @@ export class InfiniteScrollerDirective implements OnInit {
     getTombstone() {
         let tombstone = this.tombstones.pop();
         if (tombstone) {
-            tombstone.classList.remove('invisible');
-            tombstone.style.opacity = 1;
-            tombstone.style.transform = '';
-            tombstone.style.transition = '';
+            tombstone.rootNodes[0].classList.remove('invisible');
+            tombstone.rootNodes[0].style.opacity = 1;
+            tombstone.rootNodes[0].style.transform = '';
+            tombstone.rootNodes[0].style.transition = '';
             return tombstone;
         }
-        return this.source.createTombstone();
+        return this.viewRef.createEmbeddedView(this.tmpRef);
     }
 
     /**
      * Adds an item to the items list.
      */
     addItem() {
-        this.items.push({
-            'data': null,
-            'node': null,
-            'height': 0,
-            'width': 0,
-            'top': 0,
-        })
+        this.items.push(new Item());
     }
 
     /**
@@ -335,7 +354,7 @@ export class InfiniteScrollerDirective implements OnInit {
      * @param {Array<Object>} items The array of items to be added to the infinite
      *     scroller list.
      */
-    addContent(items) {
+    addContent(items: any[]) {
         this.requestInProgress = false;
         var startIndex = this.items.length;
         for (var i = 0; i < items.length; i++) {
@@ -359,7 +378,15 @@ export class InfiniteScrollerDirective implements OnInit {
             return;
         this.requestInProgress = true;
         var lastItem = this.items[this.loadedItems - 1];
-        this.source.fetch(itemsNeeded).then(this.addContent.bind(this));
+        // this.source.fetch(itemsNeeded).then(this.addContent.bind(this));
+        this.addContent([...this.list].splice(0, itemsNeeded));
+    }
+
+    updateContext(data: any, view: EmbeddedViewRef<any> = this.viewRef.createEmbeddedView(this.tmpRef), index: number = 0) {
+        view.rootNodes[0].className = '';
+        view.context.$implicit = data;
+        view.context.index = index;
+        return view;
     }
 
 }

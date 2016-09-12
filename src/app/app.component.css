@@ -8,19 +8,6 @@ html, body {
     left: 0;
 }
 
-#templates {
-    display: none;
-}
-
-infinite-scroller {
-    display: block;
-    overflow: scroll;
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-}
 
 .infinitive-scroller-host {
     margin: 0;
@@ -32,4 +19,8 @@ infinite-scroller {
     position: absolute;
     box-sizing: border-box;
     contain: layout;
+}
+
+.invisible {
+    display: none;
 }
